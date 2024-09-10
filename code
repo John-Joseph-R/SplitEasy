@@ -1,0 +1,241 @@
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(SpliteasyApp());
+}
+
+class SpliteasyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'SplitEasy',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: SpliteasyHomePage(),
+      debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+class SpliteasyHomePage extends StatefulWidget {
+  @override
+  _SpliteasyHomePageState createState() => _SpliteasyHomePageState();
+}
+
+class _SpliteasyHomePageState extends State<SpliteasyHomePage> {
+  final List<String> people = [];
+  final List<Map<String, dynamic>> foodItems = [];
+  final Map<String, Map<String, int>> personToFoodMap = {};
+
+  final TextEditingController personController = TextEditingController();
+  final TextEditingController foodNameController = TextEditingController();
+  final TextEditingController foodPriceController = TextEditingController();
+  final TextEditingController foodQtyController = TextEditingController();
+  final TextEditingController cgstController = TextEditingController();
+  final TextEditingController sgstController = TextEditingController();
+  final TextEditingController serviceChargeController = TextEditingController();
+
+  double cgst = 0.0, sgst = 0.0, serviceCharge = 0.0;
+
+  void _addPerson() {
+    if (personController.text.isNotEmpty) {
+      setState(() {
+        people.add(personController.text);
+        personToFoodMap[personController.text] = {};
+        personController.clear();
+      });
+    }
+  }
+
+  void _addFoodItem() {
+    if (foodNameController.text.isNotEmpty && foodPriceController.text.isNotEmpty && foodQtyController.text.isNotEmpty) {
+      setState(() {
+        foodItems.add({
+          'name': foodNameController.text,
+          'price': double.tryParse(foodPriceController.text) ?? 0.0,
+          'qty': int.tryParse(foodQtyController.text) ?? 1,
+        });
+        foodNameController.clear();
+        foodPriceController.clear();
+        foodQtyController.clear();
+      });
+    }
+  }
+
+  void _incrementFoodCount(String person, String foodItem) {
+    setState(() {
+      if (!personToFoodMap[person]!.containsKey(foodItem)) {
+        personToFoodMap[person]![foodItem] = 1;
+      } else {
+        personToFoodMap[person]![foodItem] = personToFoodMap[person]![foodItem]! + 1;
+      }
+    });
+  }
+
+  void _decrementFoodCount(String person, String foodItem) {
+    setState(() {
+      if (personToFoodMap[person]!.containsKey(foodItem)) {
+        personToFoodMap[person]![foodItem] = personToFoodMap[person]![foodItem]! - 1;
+        if (personToFoodMap[person]![foodItem]! <= 0) {
+          personToFoodMap[person]!.remove(foodItem);
+        }
+      }
+    });
+  }
+
+  void _updateTaxes() {
+    setState(() {
+      cgst = double.tryParse(cgstController.text) ?? 0.0;
+      sgst = double.tryParse(sgstController.text) ?? 0.0;
+      serviceCharge = double.tryParse(serviceChargeController.text) ?? 0.0;
+    });
+  }
+
+  double _calculateTotalTaxPerPerson() {
+    final totalTax = cgst + sgst + serviceCharge;
+    return people.isNotEmpty ? totalTax / people.length : 0.0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Spliteasy'),
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Who is eating?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: personController,
+                    decoration: InputDecoration(labelText: 'Enter a person'),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: _addPerson,
+                  child: Text('Add Person'),
+                ),
+              ],
+            ),
+            SizedBox(height: 20),
+            Text('Add Food Items', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: foodNameController,
+                    decoration: InputDecoration(labelText: 'Food Name'),
+                  ),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: foodPriceController,
+                    decoration: InputDecoration(labelText: 'Price'),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: foodQtyController,
+                    decoration: InputDecoration(labelText: 'Quantity'),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: _addFoodItem,
+                  child: Text('Add Food'),
+                ),
+              ],
+            ),
+            SizedBox(height: 20),
+            Text('Taxes and Service Charge', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: cgstController,
+                    decoration: InputDecoration(labelText: 'CGST'),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: sgstController,
+                    decoration: InputDecoration(labelText: 'SGST'),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: serviceChargeController,
+                    decoration: InputDecoration(labelText: 'Service Charge'),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: _updateTaxes,
+                  child: Text('Update Taxes'),
+                ),
+              ],
+            ),
+            SizedBox(height: 20),
+            Text('Match Who Ate What', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Column(
+              children: people.map((person) {
+                return Card(
+                  margin: EdgeInsets.symmetric(vertical: 8.0),
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(person, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        Wrap(
+                          spacing: 10.0,
+                          children: foodItems.map((foodItem) {
+                            return GestureDetector(
+                              onTap: () => _incrementFoodCount(person, foodItem['name']),
+                              onLongPress: () => _decrementFoodCount(person, foodItem['name']),
+                              child: Chip(
+                                label: Text('${foodItem['name']} (${personToFoodMap[person]?[foodItem['name']] ?? 0})'),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        Text(
+                          'Ate: ${personToFoodMap[person]?.entries.map((e) => "${e.key} (x${e.value})").join(', ') ?? 'Nothing selected yet'}',
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            SizedBox(height: 20),
+            Text('Summary', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Column(
+              children: people.map((person) {
+                double totalCost = 0.0;
+                personToFoodMap[person]?.forEach((foodName, count) {
+                  var foodItem = foodItems.firstWhere((item) => item['name'] == foodName);
+                  totalCost += (foodItem['price'] / foodItem['qty']) * count;
+                });
+                totalCost += _calculateTotalTaxPerPerson();
+                return ListTile(
+                  title: Text(person),
+                  subtitle: Text('Total: ₹${totalCost.toStringAsFixed(2)}'),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
