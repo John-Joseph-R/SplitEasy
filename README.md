@@ -62,10 +62,6 @@ Spliteasy is a Flutter application designed to simplify the process of splitting
 5. **View Summary:**
    - The summary section will show the total amount each person owes based on their food consumption and the applied taxes.
 
-## Screenshots
-
-Include screenshots of the app here to provide a visual understanding of its UI and features.
-
 ## Contributing
 
 Contributions are welcome! Please submit issues or pull requests to the [GitHub repository](https://github.com/John-Joseph-R/SplitEasy).
