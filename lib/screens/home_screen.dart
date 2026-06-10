@@ -58,6 +58,109 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  // ✅ THIS IS THE FIXED DIALOG METHOD – IT MUST BE DEFINED INSIDE THE STATELESS WIDGET
+  void _showCreateRoundDialog(BuildContext context) {
+    final nameCtrl = TextEditingController();
+    final prov = context.read<BillProvider>();
+    Set<String> selectedIds = {};
+
+    if (prov.people.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add people first before creating a round.')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        // We use StatefulBuilder to manage the checkbox state inside the dialog
+        return StatefulBuilder(
+          builder: (ctx, setState) {
+            return AlertDialog(
+              title: const Text('Create New Round'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Round Name',
+                        border: OutlineInputBorder(),
+                      ),
+                      autofocus: true,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Participants:',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      height: 200,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: ListView.builder(
+                        itemCount: prov.people.length,
+                        itemBuilder: (_, idx) {
+                          final person = prov.people[idx];
+                          return CheckboxListTile(
+                            value: selectedIds.contains(person.id),
+                            title: Text(person.name),
+                            onChanged: (checked) {
+                              setState(() {
+                                if (checked == true) {
+                                  selectedIds.add(person.id);
+                                } else {
+                                  selectedIds.remove(person.id);
+                                }
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    final roundName = nameCtrl.text.trim();
+                    if (roundName.isEmpty) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(content: Text('Please enter a round name')),
+                      );
+                      return;
+                    }
+                    if (selectedIds.isEmpty) {
+                      selectedIds = prov.people.map((p) => p.id).toSet();
+                    }
+                    prov.addRound(roundName, selectedIds);
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(content: Text('Round "$roundName" created!')),
+                    );
+                  },
+                  child: const Text('Create'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final prov = context.watch<BillProvider>();
@@ -125,13 +228,11 @@ class HomeScreen extends StatelessWidget {
                         child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.add, size: 20, color: Colors.blue), SizedBox(width: 4), Text("Add", style: TextStyle(color: Colors.blue))]),
                       ),
                     ),
-                    // NEW: Create Round chip
+                    // Create Round chip – NOW CALLS THE DIALOG METHOD
                     if (prov.people.isNotEmpty)
                       InkWell(
                         borderRadius: BorderRadius.circular(50),
-                        onTap: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const RoundsManagementPage()));
-                        },
+                        onTap: () => _showCreateRoundDialog(context),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(color: Colors.deepPurple.withOpacity(0.15), borderRadius: BorderRadius.circular(30)),
@@ -203,7 +304,7 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// Taxes tile widget (unchanged)
+// ============================ Taxes Tile Widget (unchanged) ============================
 class _TaxesTile extends StatefulWidget {
   @override
   State<_TaxesTile> createState() => _TaxesTileState();
