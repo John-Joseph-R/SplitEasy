@@ -4,6 +4,9 @@ import '../providers/bill_provider.dart';
 import '../models/person.dart';
 
 class FullAndFinalScreen extends StatefulWidget {
+  final String? roundId; // null = all rounds
+  const FullAndFinalScreen({super.key, this.roundId});
+
   @override
   _FullAndFinalScreenState createState() => _FullAndFinalScreenState();
 }
@@ -39,14 +42,34 @@ class _FullAndFinalScreenState extends State<FullAndFinalScreen> {
     );
   }
 
+  Map<String, double> _getShares() {
+    final provider = Provider.of<BillProvider>(context, listen: false);
+    if (widget.roundId == null) {
+      return provider.perPersonTotals();
+    } else {
+      // Filter foods by this round only
+      final roundFoods = provider.foods.where((f) => f.roundNumber == widget.roundId).toList();
+      // Create a temporary provider to calculate totals just for these foods
+      final tempProv = BillProvider();
+      tempProv.people = provider.people;
+      tempProv.foods = roundFoods;
+      tempProv.taxMode = provider.taxMode;
+      tempProv.cgst = provider.cgst;
+      tempProv.sgst = provider.sgst;
+      tempProv.service = provider.service;
+      return tempProv.perPersonTotals();
+    }
+  }
+
   void _showSettlements() {
     final provider = Provider.of<BillProvider>(context, listen: false);
     final peopleList = provider.people;
     if (peopleList.isEmpty) return;
 
+    final shares = _getShares();
     final Map<String, double> balances = {};
     for (var p in peopleList) {
-      double share = provider.getPersonShare(p.id);
+      double share = shares[p.id] ?? 0.0;
       double paid = provider.getPayment(p.id);
       balances[p.id] = paid - share;
     }
@@ -59,10 +82,7 @@ class _FullAndFinalScreenState extends State<FullAndFinalScreen> {
           title: const Text('Final Settlements'),
           content: const Text('✅ All settled! Everyone paid exactly their share.'),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Close'),
-            ),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
           ],
         ),
       );
@@ -175,20 +195,27 @@ class _FullAndFinalScreenState extends State<FullAndFinalScreen> {
   Widget build(BuildContext context) {
     final provider = Provider.of<BillProvider>(context);
     final peopleList = provider.people;
+    final shares = _getShares();
 
     if (peopleList.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Full & Final'), actions: [
-          IconButton(onPressed: _showHistory, icon: const Icon(Icons.history)),
-        ]),
+        appBar: AppBar(
+          title: Text(widget.roundId == null ? 'Full & Final (All Rounds)' : 'Round Settlement'),
+          actions: [
+            IconButton(onPressed: _showHistory, icon: const Icon(Icons.history)),
+          ],
+        ),
         body: const Center(child: Text('No participants added yet.')),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Full & Final Settlement'), actions: [
-        IconButton(onPressed: _showHistory, icon: const Icon(Icons.history)),
-      ]),
+      appBar: AppBar(
+        title: Text(widget.roundId == null ? 'Full & Final (All Rounds)' : 'Round Settlement'),
+        actions: [
+          IconButton(onPressed: _showHistory, icon: const Icon(Icons.history)),
+        ],
+      ),
       body: Column(
         children: [
           Expanded(
@@ -197,7 +224,7 @@ class _FullAndFinalScreenState extends State<FullAndFinalScreen> {
               itemCount: peopleList.length,
               itemBuilder: (ctx, index) {
                 final person = peopleList[index];
-                final share = provider.getPersonShare(person.id);
+                final share = shares[person.id] ?? 0.0;
                 final paid = provider.getPayment(person.id);
                 final balance = paid - share;
 
@@ -254,7 +281,7 @@ class _FullAndFinalScreenState extends State<FullAndFinalScreen> {
                   const Text('Net Balances', style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   ...peopleList.map((p) {
-                    double share = provider.getPersonShare(p.id);
+                    double share = shares[p.id] ?? 0.0;
                     double paid = provider.getPayment(p.id);
                     double balance = paid - share;
                     return Row(

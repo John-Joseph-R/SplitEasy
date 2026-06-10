@@ -4,7 +4,8 @@ import '../providers/bill_provider.dart';
 import '../screens/rounds_management_page.dart';
 
 class AddFoodDialog extends StatefulWidget {
-  const AddFoodDialog({super.key});
+  final String? preSelectedRoundId;
+  const AddFoodDialog({super.key, this.preSelectedRoundId});
 
   @override
   State<AddFoodDialog> createState() => _AddFoodDialogState();
@@ -15,6 +16,12 @@ class _AddFoodDialogState extends State<AddFoodDialog> {
   final priceCtrl = TextEditingController();
   final qtyCtrl = TextEditingController(text: '1');
   String? selectedRoundId;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedRoundId = widget.preSelectedRoundId;
+  }
 
   @override
   void dispose() {
@@ -36,7 +43,7 @@ class _AddFoodDialogState extends State<AddFoodDialog> {
           TextField(controller: priceCtrl, keyboardType: TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Price')),
           TextField(controller: qtyCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Quantity')),
           const SizedBox(height: 12),
-          if (prov.rounds.isEmpty)
+          if (prov.rounds.isEmpty && widget.preSelectedRoundId == null)
             Column(
               children: [
                 const Text('No rounds created yet.'),
@@ -48,7 +55,6 @@ class _AddFoodDialogState extends State<AddFoodDialog> {
                       context,
                       MaterialPageRoute(builder: (_) => const RoundsManagementPage()),
                     );
-                    // Reopen dialog after returning
                     showDialog(context: context, builder: (_) => const AddFoodDialog());
                   },
                   icon: const Icon(Icons.add),
@@ -56,7 +62,7 @@ class _AddFoodDialogState extends State<AddFoodDialog> {
                 ),
               ],
             )
-          else
+          else if (prov.rounds.isNotEmpty && widget.preSelectedRoundId == null)
             DropdownButtonFormField<String>(
               value: selectedRoundId,
               decoration: const InputDecoration(labelText: 'Assign to Round (optional)'),
@@ -65,7 +71,9 @@ class _AddFoodDialogState extends State<AddFoodDialog> {
                 ...prov.rounds.map((r) => DropdownMenuItem(value: r.id, child: Text(r.name))),
               ],
               onChanged: (val) => setState(() => selectedRoundId = val),
-            ),
+            )
+          else
+            const SizedBox.shrink(),
         ],
       ),
       actions: [
@@ -76,7 +84,7 @@ class _AddFoodDialogState extends State<AddFoodDialog> {
             final p = double.tryParse(priceCtrl.text.trim()) ?? 0.0;
             final q = int.tryParse(qtyCtrl.text.trim()) ?? 1;
             if (n.isEmpty || p <= 0 || q <= 0) return;
-            context.read<BillProvider>().addFood(n, p, q, roundId: selectedRoundId);
+            context.read<BillProvider>().addFood(n, p, q, roundId: widget.preSelectedRoundId ?? selectedRoundId);
             Navigator.pop(context);
           },
           child: const Text('Add'),

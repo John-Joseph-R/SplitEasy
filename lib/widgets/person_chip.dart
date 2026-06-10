@@ -5,22 +5,30 @@ import '../providers/bill_provider.dart';
 
 class PersonChip extends StatelessWidget {
   final Person person;
-  const PersonChip({super.key, required this.person});
+  final bool deletable;
+  const PersonChip({super.key, required this.person, this.deletable = true});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onLongPress: () => _showEditDialog(context),
-      child: InputChip(
+    if (deletable) {
+      return GestureDetector(
+        onLongPress: () => _showEditDialog(context),
+        child: InputChip(
+          label: Text(person.name),
+          onDeleted: () => context.read<BillProvider>().removePerson(person.id),
+        ),
+      );
+    } else {
+      // Non‑deletable version for round detail screen
+      return Chip(
         label: Text(person.name),
-        onDeleted: () => context.read<BillProvider>().removePerson(person.id),
-      ),
-    );
+        avatar: const Icon(Icons.person, size: 16),
+      );
+    }
   }
 
   void _showEditDialog(BuildContext context) {
     final ctrl = TextEditingController(text: person.name);
-
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -31,10 +39,7 @@ class PersonChip extends StatelessWidget {
           decoration: const InputDecoration(hintText: "Name"),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           FilledButton(
             onPressed: () {
               final newName = ctrl.text.trim();

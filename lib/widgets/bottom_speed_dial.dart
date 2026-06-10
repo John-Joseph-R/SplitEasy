@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class BottomSpeedDial extends StatefulWidget {
   final VoidCallback onAddFood;
-  final VoidCallback onAddPerson;
+  final VoidCallback? onAddPerson; // now nullable
   final VoidCallback onOpenBillSplit;
   final VoidCallback onOpenBreakdown;
   final VoidCallback onScanBill;
@@ -10,7 +10,7 @@ class BottomSpeedDial extends StatefulWidget {
   const BottomSpeedDial({
     super.key,
     required this.onAddFood,
-    required this.onAddPerson,
+    this.onAddPerson,
     required this.onOpenBillSplit,
     required this.onOpenBreakdown,
     required this.onScanBill,
@@ -100,16 +100,18 @@ class _BottomSpeedDialState extends State<BottomSpeedDial>
                         widget.onAddFood();
                       },
                     ),
-                    const SizedBox(height: 12),
-                    FloatingActionButton.extended(
-                      heroTag: "addPerson",
-                      label: const Text("Add Person"),
-                      icon: const Icon(Icons.person_add),
-                      onPressed: () {
-                        toggleMenu();
-                        widget.onAddPerson();
-                      },
-                    ),
+                    if (widget.onAddPerson != null) ...[
+                      const SizedBox(height: 12),
+                      FloatingActionButton.extended(
+                        heroTag: "addPerson",
+                        label: const Text("Add Person"),
+                        icon: const Icon(Icons.person_add),
+                        onPressed: () {
+                          toggleMenu();
+                          widget.onAddPerson!();
+                        },
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     FloatingActionButton.extended(
                       heroTag: "scanBill",
