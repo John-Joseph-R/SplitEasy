@@ -15,12 +15,15 @@ class _RoundsManagementPageState extends State<RoundsManagementPage> {
   Widget build(BuildContext context) {
     final prov = context.watch<BillProvider>();
     return Scaffold(
-      appBar: AppBar(title: const Text('Manage Rounds'), actions: [
-        IconButton(
-          onPressed: () => _showAddRoundDialog(context),
-          icon: const Icon(Icons.add),
-        ),
-      ]),
+      appBar: AppBar(
+        title: const Text('Manage Rounds'),
+        actions: [
+          IconButton(
+            onPressed: () => _showAddRoundDialog(context),
+            icon: const Icon(Icons.add),
+          ),
+        ],
+      ),
       body: prov.rounds.isEmpty
           ? const Center(child: Text('No rounds created. Tap + to add.'))
           : ListView.builder(
@@ -49,6 +52,13 @@ class _RoundsManagementPageState extends State<RoundsManagementPage> {
     final prov = context.read<BillProvider>();
     Set<String> selectedIds = {};
 
+    if (prov.people.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add people first before creating a round.')),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (_) => StatefulBuilder(
@@ -57,44 +67,57 @@ class _RoundsManagementPageState extends State<RoundsManagementPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Round Name')),
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Round Name'),
+                autofocus: true,
+              ),
               const SizedBox(height: 12),
               const Text('Select participants:'),
               const SizedBox(height: 8),
-              if (prov.people.isEmpty)
-                const Text('No people added yet.')
-              else
-                SizedBox(
-                  height: 200,
-                  child: ListView.builder(
-                    itemCount: prov.people.length,
-                    itemBuilder: (_, idx) {
-                      final person = prov.people[idx];
-                      return CheckboxListTile(
-                        value: selectedIds.contains(person.id),
-                        title: Text(person.name),
-                        onChanged: (checked) {
-                          setState(() {
-                            if (checked == true)
-                              selectedIds.add(person.id);
-                            else
-                              selectedIds.remove(person.id);
-                          });
-                        },
-                      );
-                    },
-                  ),
+              SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  itemCount: prov.people.length,
+                  itemBuilder: (_, idx) {
+                    final person = prov.people[idx];
+                    return CheckboxListTile(
+                      value: selectedIds.contains(person.id),
+                      title: Text(person.name),
+                      onChanged: (checked) {
+                        setState(() {
+                          if (checked == true) {
+                            selectedIds.add(person.id);
+                          } else {
+                            selectedIds.remove(person.id);
+                          }
+                        });
+                      },
+                    );
+                  },
                 ),
+              ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
             FilledButton(
               onPressed: () {
-                if (nameCtrl.text.trim().isNotEmpty) {
-                  prov.addRound(nameCtrl.text.trim(), selectedIds);
-                  Navigator.pop(ctx);
+                final roundName = nameCtrl.text.trim();
+                if (roundName.isEmpty) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('Please enter a round name')),
+                  );
+                  return;
                 }
+                if (selectedIds.isEmpty) {
+                  selectedIds = prov.people.map((p) => p.id).toSet();
+                }
+                prov.addRound(roundName, selectedIds);
+                Navigator.pop(ctx);
               },
               child: const Text('Create'),
             ),
@@ -132,10 +155,11 @@ class _RoundsManagementPageState extends State<RoundsManagementPage> {
                       title: Text(person.name),
                       onChanged: (checked) {
                         setState(() {
-                          if (checked == true)
+                          if (checked == true) {
                             selectedIds.add(person.id);
-                          else
+                          } else {
                             selectedIds.remove(person.id);
+                          }
                         });
                       },
                     );
