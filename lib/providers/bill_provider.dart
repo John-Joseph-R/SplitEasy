@@ -115,7 +115,7 @@ class BillProvider with ChangeNotifier {
       price: price,
       qty: qty,
       assigned: assigned,
-      roundNumber: roundId,   // No cast – roundId is already String?
+      roundNumber: roundId,
       isRoundBased: roundId != null,
     ));
     _saveAll();
@@ -141,11 +141,12 @@ class BillProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // FIXED: preserve round association when manually assigning participants
   void assignFood(String foodId, Set<String> assigned) {
     final f = foods.firstWhere((x) => x.id == foodId);
     f.assigned = assigned;
-    f.isRoundBased = false;
-    f.roundNumber = null;
+    // Do NOT clear roundNumber or isRoundBased – keep the round association.
+    // Only if the user explicitly wants to remove from round, they can edit the food.
     _saveAll();
     notifyListeners();
   }
@@ -169,6 +170,7 @@ class BillProvider with ChangeNotifier {
     rounds.removeWhere((r) => r.id == roundId);
     for (var food in foods) {
       if (food.roundNumber == roundId) {
+        // Option: either remove round association or keep it but mark isRoundBased false
         food.isRoundBased = false;
         food.roundNumber = null;
       }

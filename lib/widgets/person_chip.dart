@@ -5,47 +5,33 @@ import '../providers/bill_provider.dart';
 
 class PersonChip extends StatelessWidget {
   final Person person;
-  const PersonChip({super.key, required this.person});
+  final bool deletable;
+  const PersonChip({super.key, required this.person, this.deletable = true});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onLongPress: () => _showEditDialog(context),
-      child: InputChip(
-        label: Text(person.name),
-        onDeleted: () => context.read<BillProvider>().removePerson(person.id),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(30),
       ),
-    );
-  }
-
-  void _showEditDialog(BuildContext context) {
-    final ctrl = TextEditingController(text: person.name);
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Edit Person"),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: "Name"),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.person, size: 16, color: Color(0xFF4F46E5)),
+            const SizedBox(width: 6),
+            Text(person.name, style: const TextStyle(fontWeight: FontWeight.w500)),
+            if (deletable) ...[
+              const SizedBox(width: 6),
+              GestureDetector(
+                onTap: () => context.read<BillProvider>().removePerson(person.id),
+                child: const Icon(Icons.close, size: 16, color: Colors.grey),
+              ),
+            ],
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          FilledButton(
-            onPressed: () {
-              final newName = ctrl.text.trim();
-              if (newName.isNotEmpty) {
-                context.read<BillProvider>().editPerson(person.id, newName);
-              }
-              Navigator.pop(context);
-            },
-            child: const Text("Save"),
-          )
-        ],
       ),
     );
   }
