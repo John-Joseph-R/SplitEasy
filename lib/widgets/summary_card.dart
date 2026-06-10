@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/bill_provider.dart';
 import '../models/person.dart';
@@ -7,59 +6,50 @@ import '../models/food_item.dart';
 
 class SummaryCard extends StatelessWidget {
   final ScrollController? scrollController;
-  final List<Person>? participants;
-  final List<FoodItem>? foods;
-  final TaxMode? taxMode;
-  final String? cgst;
-  final String? sgst;
-  final String? service;
+  final List<Person> participants;
+  final List<FoodItem> foods;
+  final TaxMode taxMode;
+  final String cgst;
+  final String sgst;
+  final String service;
 
-  SummaryCard({
+  const SummaryCard({
     super.key,
     this.scrollController,
-    this.participants,
-    this.foods,
-    this.taxMode,
-    this.cgst,
-    this.sgst,
-    this.service,
+    required this.participants,
+    required this.foods,
+    required this.taxMode,
+    required this.cgst,
+    required this.sgst,
+    required this.service,
   });
-
-  final currency = NumberFormat.currency(symbol: '₹', decimalDigits: 2);
 
   @override
   Widget build(BuildContext context) {
-    final prov = context.watch<BillProvider>();
-    final effectiveParticipants = participants ?? prov.people;
-    final effectiveFoods = foods ?? prov.foods;
-    final effectiveTaxMode = taxMode ?? prov.taxMode;
-    final effectiveCgst = cgst ?? prov.cgst;
-    final effectiveSgst = sgst ?? prov.sgst;
-    final effectiveService = service ?? prov.service;
+    final currency = NumberFormat.currency(symbol: '₹', decimalDigits: 2);
 
-    // Calculate totals manually (since we may have filtered lists)
-    final subtotal = effectiveFoods.fold(0.0, (s, f) => s + f.price * f.qty);
+    final subtotal = foods.fold(0.0, (s, f) => s + f.price * f.qty);
     final Map<String, double> totals = {};
-    for (var p in effectiveParticipants) totals[p.id] = 0.0;
+    for (var p in participants) totals[p.id] = 0.0;
 
-    for (var f in effectiveFoods) {
+    for (var f in foods) {
       final cost = f.price * f.qty;
-      final assigned = f.assigned.isNotEmpty ? f.assigned : effectiveParticipants.map((p) => p.id).toSet();
+      final assigned = f.assigned.isNotEmpty ? f.assigned : participants.map((p) => p.id).toSet();
       if (assigned.isEmpty) continue;
       final share = cost / assigned.length;
       for (var pid in assigned) totals[pid] = (totals[pid] ?? 0) + share;
     }
 
     double _toDouble(String s) => double.tryParse(s) ?? 0.0;
-    if (effectiveTaxMode == TaxMode.percent) {
-      final multiplier = 1.0 + (_toDouble(effectiveCgst) + _toDouble(effectiveSgst) + _toDouble(effectiveService)) / 100.0;
+    if (taxMode == TaxMode.percent) {
+      final multiplier = 1.0 + (_toDouble(cgst) + _toDouble(sgst) + _toDouble(service)) / 100.0;
       totals.updateAll((k, v) => v * multiplier);
     } else {
-      final totalTax = _toDouble(effectiveCgst) + _toDouble(effectiveSgst) + _toDouble(effectiveService);
+      final totalTax = _toDouble(cgst) + _toDouble(sgst) + _toDouble(service);
       final baseSum = totals.values.fold(0.0, (a, b) => a + b);
-      if (baseSum <= 0.0001 && effectiveParticipants.isNotEmpty) {
-        final equalShare = (subtotal + totalTax) / effectiveParticipants.length;
-        for (var p in effectiveParticipants) totals[p.id] = equalShare;
+      if (baseSum <= 0.0001 && participants.isNotEmpty) {
+        final equalShare = (subtotal + totalTax) / participants.length;
+        for (var p in participants) totals[p.id] = equalShare;
       } else if (baseSum > 0) {
         totals.updateAll((k, v) {
           final taxShare = (v / baseSum) * totalTax;
@@ -71,57 +61,78 @@ class SummaryCard extends StatelessWidget {
     final grand = totals.values.fold(0.0, (a, b) => a + b);
 
     return Container(
-      color: Theme.of(context).colorScheme.background.withOpacity(0.98),
-      padding: const EdgeInsets.all(12),
-      child: Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 10,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Row(children: [Expanded(child: Text('Summary', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))), Text('Grand: ${currency.format(grand)}', style: const TextStyle(fontWeight: FontWeight.w700))]),
-            const SizedBox(height: 8),
-            if (effectiveParticipants.isEmpty)
-              const SizedBox(height: 40, child: Center(child: Text('No participants')))
-            else
-              SizedBox(
-                height: 90,
-                child: ListView.separated(
-                  itemCount: effectiveParticipants.length,
-                  itemBuilder: (_, i) {
-                    final p = effectiveParticipants[i];
-                    final amt = totals[p.id] ?? 0.0;
-                    return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(p.name), Text(currency.format(amt), style: const TextStyle(fontWeight: FontWeight.w600))]);
-                  },
-                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Summary', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4F46E5).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text('Grand: ${currency.format(grand)}', style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF4F46E5))),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (participants.isEmpty)
+            const Center(child: Text('No participants'))
+          else
+            SizedBox(
+              height: 120,
+              child: ListView.separated(
+                controller: scrollController,
+                itemCount: participants.length,
+                separatorBuilder: (_, __) => const Divider(),
+                itemBuilder: (_, i) {
+                  final p = participants[i];
+                  final amt = totals[p.id] ?? 0.0;
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(p.name, style: const TextStyle(fontWeight: FontWeight.w500)),
+                      Text(currency.format(amt), style: const TextStyle(fontWeight: FontWeight.w600)),
+                    ],
+                  );
+                },
+              ),
+            ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _showBreakdownDialog(context, subtotal, totals, currency),
+                  icon: const Icon(Icons.receipt_long),
+                  label: const Text('Details'),
                 ),
               ),
-            const SizedBox(height: 8),
-            Row(children: [
+              const SizedBox(width: 12),
               Expanded(
                 child: FilledButton.icon(
-                  onPressed: () => _showBreakdown(context, effectiveParticipants, effectiveFoods, subtotal, effectiveTaxMode, effectiveCgst, effectiveSgst, effectiveService, totals),
-                  icon: const Icon(Icons.receipt_long),
-                  label: const Text('View'),
+                  onPressed: () => _exportCsv(context, subtotal, totals, currency),
+                  icon: const Icon(Icons.share),
+                  label: const Text('Export'),
                 ),
               ),
-              const SizedBox(width: 8),
-              OutlinedButton.icon(
-                onPressed: effectiveParticipants.isEmpty && effectiveFoods.isEmpty ? null : () => _exportCsv(context, effectiveParticipants, effectiveFoods, effectiveTaxMode, effectiveCgst, effectiveSgst, effectiveService, totals),
-                icon: const Icon(Icons.share),
-                label: const Text('Export'),
-              ),
-            ]),
-          ]),
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  void _showBreakdown(BuildContext context, List<Person> people, List<FoodItem> foods, double subtotal, TaxMode taxMode, String cgst, String sgst, String service, Map<String, double> totals) {
+  void _showBreakdownDialog(BuildContext context, double subtotal, Map<String, double> totals, NumberFormat currency) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         title: const Text('Breakdown'),
         content: SingleChildScrollView(
           child: Column(
@@ -129,33 +140,42 @@ class SummaryCard extends StatelessWidget {
             children: [
               Text('Subtotal: ${currency.format(subtotal)}'),
               const SizedBox(height: 8),
-              taxMode == TaxMode.percent
-                  ? Text('Taxes (percent): CGST ${cgst}%, SGST ${sgst}%, Service ${service}%')
-                  : Text('Taxes (absolute): CGST ${currency.format(double.tryParse(cgst) ?? 0)}, SGST ${currency.format(double.tryParse(sgst) ?? 0)}, Service ${currency.format(double.tryParse(service) ?? 0)}'),
+              Text(taxMode == TaxMode.percent
+                  ? 'Taxes: CGST ${cgst}%, SGST ${sgst}%, Service ${service}%'
+                  : 'Taxes: CGST ${currency.format(double.tryParse(cgst) ?? 0)}, SGST ${currency.format(double.tryParse(sgst) ?? 0)}, Service ${currency.format(double.tryParse(service) ?? 0)}'),
               const SizedBox(height: 12),
-              const Text('Per-person:'),
-              const SizedBox(height: 8),
-              ...people.map((p) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Text('${p.name}: ${currency.format(totals[p.id] ?? 0)}'))).toList(),
+              const Text('Per person:', style: TextStyle(fontWeight: FontWeight.w600)),
+              ...participants.map((p) => Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(p.name), Text(currency.format(totals[p.id] ?? 0))]),
+              )),
               const SizedBox(height: 12),
-              const Text('Items:'),
-              ...foods.map((f) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Text('${f.name}: ${currency.format(f.price)} × ${f.qty} = ${currency.format(f.price * f.qty)}'))).toList(),
+              const Text('Items:', style: TextStyle(fontWeight: FontWeight.w600)),
+              ...foods.map((f) => Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text('${f.name}: ${currency.format(f.price)} × ${f.qty} = ${currency.format(f.price * f.qty)}'),
+              )),
             ],
           ),
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+        ],
       ),
     );
   }
 
-  void _exportCsv(BuildContext context, List<Person> people, List<FoodItem> foods, TaxMode taxMode, String cgst, String sgst, String service, Map<String, double> totals) {
+  void _exportCsv(BuildContext context, double subtotal, Map<String, double> totals, NumberFormat currency) {
     final buffer = StringBuffer();
-    buffer.writeln('Spliteasy export');
+    buffer.writeln('Spliteasy Export');
     buffer.writeln('Date,${DateTime.now().toIso8601String()}');
     buffer.writeln('');
     buffer.writeln('Items:');
     buffer.writeln('Name,Price,Qty,Total,Assigned');
     for (var f in foods) {
-      final assignedNames = f.assigned.isEmpty ? (people.isEmpty ? '—' : people.map((p) => p.name).join('|')) : people.where((p) => f.assigned.contains(p.id)).map((p) => p.name).join('|');
+      final assignedNames = f.assigned.isEmpty
+          ? (participants.isEmpty ? '—' : participants.map((p) => p.name).join('|'))
+          : participants.where((p) => f.assigned.contains(p.id)).map((p) => p.name).join('|');
       buffer.writeln('"${f.name}",${f.price.toStringAsFixed(2)},${f.qty},${(f.price * f.qty).toStringAsFixed(2)},"$assignedNames"');
     }
     buffer.writeln('');
@@ -166,16 +186,19 @@ class SummaryCard extends StatelessWidget {
     buffer.writeln('');
     buffer.writeln('Per person totals:');
     buffer.writeln('Name,Amount');
-    for (var p in people) buffer.writeln('"${p.name}",${totals[p.id]?.toStringAsFixed(2) ?? "0.00"}');
+    for (var p in participants) buffer.writeln('"${p.name}",${totals[p.id]?.toStringAsFixed(2) ?? "0.00"}');
     buffer.writeln('');
     buffer.writeln('Grand Total,${totals.values.fold(0.0, (a, b) => a + b).toStringAsFixed(2)}');
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('CSV Export'),
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: const Text('Export CSV'),
         content: SingleChildScrollView(child: Text(buffer.toString())),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+        ],
       ),
     );
   }

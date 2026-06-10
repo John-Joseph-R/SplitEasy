@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/bill_provider.dart';
-import '../screens/contact_picker_page.dart'; // <-- ADD THIS IMPORT
+import '../screens/contact_picker_page.dart';
 
 class AddPersonDialog extends StatefulWidget {
   const AddPersonDialog({super.key});
@@ -22,55 +22,38 @@ class _AddPersonDialogState extends State<AddPersonDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Add Person'),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      title: const Text('Add person'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: _ctrl,
-            decoration: const InputDecoration(
-              hintText: "Name",
-            ),
+            decoration: const InputDecoration(hintText: 'Name'),
             autofocus: true,
           ),
-
-          const SizedBox(height: 10),
-
-          // CONTACT PICKER BUTTON
-          FilledButton.icon(
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
             onPressed: () async {
-              final contact = await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => ContactPickerPage()),
-              );
-
-              if (contact != null) {
-                setState(() {
-                  _ctrl.text = contact.displayName;
-                });
-              }
+              final contact = await Navigator.push(context, MaterialPageRoute(builder: (_) => ContactPickerPage()));
+              if (contact != null) setState(() => _ctrl.text = contact.displayName);
             },
             icon: const Icon(Icons.contacts),
-            label: const Text("Pick from Contacts"),
+            label: const Text('Pick from contacts'),
           ),
         ],
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
         FilledButton(
           onPressed: () {
             final name = _ctrl.text.trim();
             if (name.isEmpty) return;
-
             context.read<BillProvider>().addPerson(name);
             Navigator.pop(context);
           },
           child: const Text('Add'),
-        )
+        ),
       ],
     );
   }

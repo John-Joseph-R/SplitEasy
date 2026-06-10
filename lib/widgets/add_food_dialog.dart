@@ -35,56 +35,54 @@ class _AddFoodDialogState extends State<AddFoodDialog> {
   Widget build(BuildContext context) {
     final prov = context.watch<BillProvider>();
     return AlertDialog(
-      title: const Text('Add food'),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      title: const Text('Add food item'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
-          TextField(controller: priceCtrl, keyboardType: TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Price')),
+          TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name'), autofocus: true),
+          const SizedBox(height: 16),
+          TextField(controller: priceCtrl, keyboardType: TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Price (₹)')),
+          const SizedBox(height: 16),
           TextField(controller: qtyCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Quantity')),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           if (prov.rounds.isEmpty && widget.preSelectedRoundId == null)
             Column(
               children: [
-                const Text('No rounds created yet.'),
+                const Text('No rounds yet – create one first'),
                 const SizedBox(height: 8),
-                FilledButton.icon(
+                TextButton.icon(
                   onPressed: () async {
                     Navigator.pop(context);
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const RoundsManagementPage()),
-                    );
-                    showDialog(context: context, builder: (_) => const AddFoodDialog());
+                    await Navigator.push(context, MaterialPageRoute(builder: (_) => const RoundsManagementPage()));
+                    if (context.mounted) showDialog(context: context, builder: (_) => const AddFoodDialog());
                   },
                   icon: const Icon(Icons.add),
-                  label: const Text('Create a round first'),
+                  label: const Text('Create round'),
                 ),
               ],
             )
           else if (prov.rounds.isNotEmpty && widget.preSelectedRoundId == null)
             DropdownButtonFormField<String>(
               value: selectedRoundId,
-              decoration: const InputDecoration(labelText: 'Assign to Round (optional)'),
+              decoration: const InputDecoration(labelText: 'Round (optional)'),
               items: [
-                const DropdownMenuItem(value: null, child: Text('None (manual assignment)')),
+                const DropdownMenuItem(value: null, child: Text('None (manual split)')),
                 ...prov.rounds.map((r) => DropdownMenuItem(value: r.id, child: Text(r.name))),
               ],
-              onChanged: (val) => setState(() => selectedRoundId = val),
-            )
-          else
-            const SizedBox.shrink(),
+              onChanged: (v) => setState(() => selectedRoundId = v),
+            ),
         ],
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
         FilledButton(
           onPressed: () {
-            final n = nameCtrl.text.trim();
-            final p = double.tryParse(priceCtrl.text.trim()) ?? 0.0;
-            final q = int.tryParse(qtyCtrl.text.trim()) ?? 1;
-            if (n.isEmpty || p <= 0 || q <= 0) return;
-            context.read<BillProvider>().addFood(n, p, q, roundId: widget.preSelectedRoundId ?? selectedRoundId);
+            final name = nameCtrl.text.trim();
+            final price = double.tryParse(priceCtrl.text.trim()) ?? 0.0;
+            final qty = int.tryParse(qtyCtrl.text.trim()) ?? 1;
+            if (name.isEmpty || price <= 0 || qty <= 0) return;
+            prov.addFood(name, price, qty, roundId: widget.preSelectedRoundId ?? selectedRoundId);
             Navigator.pop(context);
           },
           child: const Text('Add'),
